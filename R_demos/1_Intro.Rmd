@@ -1,0 +1,108 @@
+---
+title: "GAM modelling with mgcv and mgcViz"
+date: '`r format(Sys.Date(), "%B %d %Y")`'
+author: "Matteo Fasiolo"
+vignette: >
+    %\VignetteIndexEntry{quantile_mgcViz}
+    %\VignetteEncoding{UTF-8}
+    %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+  
+```{r setup, include=FALSE}
+library(knitr)
+library(rgl)
+opts_chunk$set(out.extra='style="display:block; margin: auto"', fig.align="center", tidy=FALSE)
+```
+
+```{r setup1, include=FALSE}
+library(RhpcBLASctl); blas_set_num_threads(1)
+```
+
+Modelling the GEFCom14 electricity demand data
+=======================
+
+Load data and have a look at it
+```{r loadDat, fig.width = 7, fig.height = 5}
+library(testGam)
+data("gefcom_small")
+head(gefcom_small)   # wM_s95[t] = 0.95 * wM_s95[t-1] + 0.05 * wM[t]  
+
+plot(gefcom_small$NetDemand)
+```
+
+We divide into a train and a testing data set:
+```{r loadDat_2, fig.width = 7, fig.height = 5}
+train <- gefcom_small[gefcom_small$Year < 2011, ]
+test <- gefcom_small[gefcom_small$Year == 2011, ]
+```
+
+Fit a basic Gaussian GAM:
+```{r fit_gaus, message = F, fig.width = 8, fig.height = 5}
+library(mgcv)
+fit1 <- gam(formula = NetDemand ~ NetDemand.24 + Dow + Trend + 
+                      wM + wM_s95 + s(Posan, bs = "cc"), 
+            data = train)
+```
+
+Visualise the seasonal effect with mgcViz:
+```{r plot_1edd, message = F, fig.width = 6, fig.height = 4}
+library(mgcViz)
+fit1 <- getViz(fit1, nsim = 100)
+plot(fit1)
+```
+
+Visualise all terms:
+```{r plot_gam_args, message = F, fig.width = 6, fig.height = 4}
+print(plot(fit1, allTerms = TRUE), pages = 1)
+```
+
+Should we model temperature non-linearly? Let's see:
+```{r my_check, message = F, fig.width = 6, fig.height = 4}
+check1D(fit1, "wM") + l_gridCheck1D()
+```
+
+It seems so. Update the model:
+```{r my_check_2, message = F, fig.width = 8, fig.height = 5}
+fit2 <- gamV(formula = NetDemand ~ NetDemand.24 + Dow + Trend + 
+                       s(wM) + s(wM_s95) + s(Posan, bs = "cc"), 
+             data = train, 
+             aViz = list(nsim = 100))
+
+check1D(fit2, "wM") + l_gridCheck1D()
+```
+
+Get some diagnostics on the last model:
+```{r my_check_2a, message = F, fig.width = 8, fig.height = 7}
+check(fit2)
+```
+
+We might need more basis functions for `wM`:
+```{r my_check_3, message = F, fig.width = 8, fig.height = 5}
+fit3 <- gamV(formula = NetDemand ~ NetDemand.24 + Dow + Trend + 
+                       s(wM, k = 15) + s(wM_s95) + s(Posan, bs = "cc"), 
+             data = train, 
+             aViz = list(nsim = 100))
+
+AIC(fit1, fit2, fit3)
+```
+
+Get p-values etc:
+```{r my_check_4, message = F, fig.width = 8, fig.height = 5}
+summary(fit3)
+```
+
+Making predictions:
+```{r my_check_4a, message = F, fig.width = 8, fig.height = 5}
+preds <- predict(fit3, newdata = test)
+head(preds)
+```
+
+Plot the fit:
+```{r my_check_4b, message = F, fig.width = 8, fig.height = 5}
+plot(test$NetDemand)
+lines(preds, col = 2)
+```
+
+
