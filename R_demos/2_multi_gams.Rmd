@@ -24,7 +24,7 @@ Body mass index modelling
 
 Simple data set on BMI vs age:
 ```{r gripss1, message = F}
-library(gamlss.data)
+library(testGam)
 data(dbbmi)
 
 plot(bmi ~ age, data = dbbmi)
@@ -168,6 +168,7 @@ check1D(fit2, "doy") + l_gridCheck1D(gridFun = function(.x){
 
 Look at accumulated local effects (ALEs) of `doy` on load variance at 5pm:
 ```{r ALE0, fig.width = 7, fig.height = 5}
+# NOTE: for ALEs you need install_github("mfasiolo/mgcViz")
 plot(ALE(fit2, oind = 3, x = "doy", type = "response"))
 ```
 and correlation:
@@ -175,13 +176,13 @@ and correlation:
 plot(ALE(fit2, oind = 5, x = "doy", type = "response"))
 ```
 
-Look at predictions estimated by-variate Gaussian:
+Look at predictions of bi-variate Gaussian:
 ```{r plot_ga6, fig.width = 7, fig.height = 5}
 preds <- predict(fit2, type = "response")
 head(preds)
 ```
 
-```{r plot_ga0, dev='png', fig.width = 6, fig.height = 6, fig.show='hide'}
+```{r plot_ga0, dev='png', fig.width = 5, fig.height = 5, fig.show='hide'}
 library(mvnfast)
 ii <- 1
 sig_1 <- sqrt(preds[ii, 3])
@@ -199,8 +200,81 @@ contour(x, y, z, main = paste0("Day of year = ", GEF14_d4$doy[ii]),
 ii <- ii + 10
 ```
 
-![Bi-variate demand distribution (centered at zero)](`r knitr::fig_chunk('plot_ga0', 'png')`)
+![Bi-variate demand distribution (centered at zero)](`r knitr::fig_chunk('plot_ga0', 'png')`){width=60%}
 
+Dynamic aggregation of experts for smart meter data forecasting
+=======================
+
+Load some packages and the data:
+```{r fact1, fig.width = 6, fig.height = 6, message = F}
+library(gamFactory)
+library(mgcViz)
+library(dplyr)
+library(magrittr)
+
+data("smart_dat")
+head(round(smart_dat, 2))
+```
+
+Look at the data and divide into train/test:
+```{r fact2, fig.width = 7, fig.height = 5}
+train <- smart_dat[smart_dat$test == FALSE, ]
+test <- smart_dat[smart_dat$test == TRUE, ]
+
+plot(smart_dat$ldem, type = "l")
+abline(v = nrow(train), lty = 2, col = 2, lwd = 2)
+```
+
+Look at experts fit on train set:
+```{r fact2a, fig.width = 7, fig.height = 5}
+plot(train$ldem[2500:6000], type = "l")
+lines(train$mu_g[2500:6000], col = 4, lwd = 2)
+lines(train$mu_l[2500:6000], col = 2, lwd = 2)
+```
+
+Fit stacking model to training set, weights depend on lagged MSEs:
+```{r fact3, fig.width = 7, fig.height = 5}
+library(gamFactory)
+library(mgcViz)
+stack <- gam(list(ldem ~ s(mse_g_48, k = 5) + s(mse_l_48, k = 5)), 
+             family = fam_stackProb(cbind(train$lp_g, train$lp_l)), 
+             data = train)
+stack <- getViz(stack)
+```
+
+Plot effects:
+```{r fact4, fig.width = 9, fig.height = 5}
+print(plot(stack), pages = 1)
+```
+
+Predict weights on test set and get weighted predicted mean:
+```{r fact5, fig.width = 7, fig.height = 5}
+test$weights <- predict(stack, type = "response", newdata = test)
+test$mu_s <- with(test, weights[ , 1] * mu_g + weights[ , 2] * mu_l)
+```
+
+Plot predictions (top) and weights (bottom):
+```{r fact6, fig.width = 7, fig.height = 8}
+par(mfrow = c(2, 1), mar = c(5.1, 4.1, 1.1, 1.1))
+plot(test$ldem, type = "l", col = "grey", ylab = "ldem")
+lines(test$mu_s, type = "l", col = 4, lwd = 2)
+plot(test$weights[ , 1], col = 1, ylab = "weight", type = 'l')
+```
+
+Compute MSE on test set:
+```{r fact7, fig.width = 7, fig.height = 8}
+mses <- test %>% group_by(doy) %>% summarise(mse_s = mean((ldem-mu_s)^2))
+test <- test %>% left_join(mses)
+
+colMeans(test[ , c("mse_g", "mse_l", "mse_s")])
+```
+
+Plot accumulated local effect of lagged MSEs on the weight:
+```{r fact7a, fig.width = 7, fig.height = 5}
+# NOTE: for this you need install_github("mfasiolo/mgcViz")
+plot(ALE(stack, oind = 1, x = "mse_g_48", type = "response"))
+plot(ALE(stack, oind = 1, x = "mse_l_48", type = "response"))
+```
 
 
 
