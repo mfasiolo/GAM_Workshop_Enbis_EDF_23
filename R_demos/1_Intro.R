@@ -6,7 +6,10 @@
 # Load data and have a look at it:
 library(testGam)
 data("gefcom_small")
-head(gefcom_small)   # wM_s95[t] = 0.95 * wM_s95[t-1] + 0.05 * wM[t]  
+
+# wM_s95[t] = 0.95 * wM_s95[t-1] + 0.05 * wM[t]  
+head(gefcom_small)[ , c("Year", "NetDemand", "NetDemand.24", 
+                        "wM", "wM_s95", "Posan", "Trend", "Dow")]
 
 plot(gefcom_small$NetDemand)
 
@@ -70,7 +73,9 @@ library(testGam)
 library(mgcViz)
 data("gefcom_big")
 
-head(gefcom_big)
+head(gefcom_big)[ , c("Year", "NetDemand", "NetDemand.24", 
+                      "wM", "wM_s95", "Posan", "Trend", "Dow", "Instant")]
+
 nrow(gefcom_big) / nrow(gefcom_small)
 
 # Suppose we want to use this model formula:
@@ -89,8 +94,11 @@ form <- NetDemand ~ Dow +
 # Fit larger model with `gam` and `bam`:
 
 ###### DO NOT RUN!!!!!
+
 # fit_g <- gam(formula = form, data = gefcom_big) # Takes ~ 3 min
+
 # fit_b <- bam(formula = form, data = gefcom_big) # Takes ~ 1 min
+
 #####
 
 # Use discrete approximation:
@@ -101,9 +109,11 @@ fit_bd <- getViz(fit_bd)
 
 print(plot(fit_bd), pages = 2)
 
-# Wood et al. (2017) use discretization fit model with n = 10^8 and p = 10^4, see.
+# Wood et al. (2017) use discretization fit model with n = 10^8 and p = 10^4 in 5min on 8 cores, see:
 #
-# For details see:
+#   - Wood, S. N., Z. Li, G. Shaddick, and N. H. Augustin (2017). Generalized additive
+# models for gigadata: modeling the uk black smoke network daily data. Journal of the
+# American Statistical Association 112 (519), 1199–1210.
 # 
 #   - Li, Z. and S. N. Wood (2019). Faster model matrix crossproducts for large generalized
 # linear models with discretized covariates. Statistics and Computing , 1–7.
@@ -112,7 +122,5 @@ print(plot(fit_bd), pages = 2)
 # sets. Journal of the Royal Statistical Society: Series C (Applied Statistics) 64 (1),
 # 139–155.
 # 
-#   - Wood, S. N., Z. Li, G. Shaddick, and N. H. Augustin (2017). Generalized additive
-# models for gigadata: modeling the uk black smoke network daily data. Journal of the
-# American Statistical Association 112 (519), 1199–1210.
+
 # 

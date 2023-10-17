@@ -18,7 +18,7 @@ fit1 <- gamV(bmi ~ s(age, bs = "ad", k = 20),
              aViz = list(nsim = 50))
 
 # The mean bmi vs age looks right:
-check1D(fit1, "age") + l_gridCheck1D() 
+check1D(fit1, "age") + l_gridCheck1D(n=40) 
 
 # Now we check the residuals standard deviation along `age`:
 check1D(fit1, "age") + l_gridCheck1D( sd )
@@ -53,7 +53,7 @@ check1D(fit3, "age") + l_gridCheck1D( skewness )
 print(plot(fit3), pages = 1)
 
 # Plot quantiles:
-plot(bmi~age, data=dbbmi, col = "grey")
+plot(bmi ~ age, data = dbbmi, col = "darkgrey")
 pr <- predict(fit3)
 for(.q in c(0.01, 0.25, 0.5, 0.75, 0.99)){
   q_hat <- fit3$family$qf(.q, pr)
@@ -76,7 +76,7 @@ print(head(GEF14_d4[ , c("year", "doy", "dow", "load_h17", "load_h20", "load24_h
 # Fit a bivariate Gaussian GAM with fixed covariance matrix:
 fit1 <- gam_scm(list(load_h17 ~ dow + s(doy, k = 15) + load24_h17 + s(temp_h17), 
                      load_h20 ~ dow + s(doy, k = 15) + load24_h20 + s(temp_h20)), 
-                family = mvn_scm(d=2), # OR mgcv::mvn(d=2)
+                family = mvn_scm(d=2),
                 data = GEF14_d4)
 fit1 <- getViz(fit1, nsim = 25)
 
@@ -143,7 +143,7 @@ f     <- function(x, y) dmvn(cbind(x, y), mu, sigma)
 z     <- outer(x, y, f)
 contour(x, y, z, main = paste0("Day of year = ", GEF14_d4$doy[ii]), 
         xlab = "Demand at 5pm", ylab = "Demand at 8pm")
-ii <- ii + 10
+ii <- ii + 5
 
 
 ############################################
