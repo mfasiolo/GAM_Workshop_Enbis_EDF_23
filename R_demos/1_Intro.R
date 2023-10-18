@@ -47,7 +47,7 @@ check(fit2)
 
 # We might need more basis functions for `wM`:
 fit3 <- gamV(formula = NetDemand ~ NetDemand.24 + Dow + Trend + 
-                       s(wM, k = 15) + s(wM_s95) + s(Posan, bs = "cc"), 
+                       s(wM, k = 15) + s(wM_s95) + s(Posan, k = 15, bs = "cc"), 
              data = train, 
              aViz = list(nsim = 100))
 

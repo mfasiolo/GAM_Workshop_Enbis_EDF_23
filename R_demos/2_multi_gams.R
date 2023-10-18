@@ -154,6 +154,7 @@ library(gamFactory)
 library(mgcViz)
 library(dplyr)
 library(magrittr)
+library(testGam)
 
 data("smart_dat")
 plot(exp(smart_dat$ldem), type = 'l')
